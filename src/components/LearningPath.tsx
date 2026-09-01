@@ -18,7 +18,7 @@ const difficultyStyle: Record<string, string> = {
 }
 
 const PATH_WIDTH = 320
-const ROW_HEIGHT = 132
+const ROW_HEIGHT = 156
 const NODE_SIZE = 64
 // zigzag amplitude cycle (px offset from center), repeats every 8 nodes
 const OFFSETS = [0, 52, 80, 52, 0, -52, -80, -52]
@@ -156,7 +156,7 @@ function ModulePath({
             <div
               key={lesson.id}
               className="absolute flex flex-col items-center"
-              style={{ left: center.x, top: center.y, transform: 'translate(-50%, -50%)', width: 128 }}
+              style={{ left: center.x, top: center.y, transform: 'translate(-50%, -50%)', width: 140 }}
             >
               <button
                 disabled={!unlocked}
@@ -182,7 +182,7 @@ function ModulePath({
               <div className="mt-2 text-center">
                 <div className="flex items-center justify-center gap-1">
                   <span
-                    className={`text-xs leading-snug line-clamp-2 ${isCurrent ? 'font-bold' : 'font-medium'} ${unlocked ? 'text-[var(--color-text)]' : 'text-[var(--color-text-faint)]'}`}
+                    className={`text-xs leading-snug ${isCurrent ? 'font-bold' : 'font-medium'} ${unlocked ? 'text-[var(--color-text)]' : 'text-[var(--color-text-faint)]'}`}
                   >
                     {lesson.title}
                   </span>
