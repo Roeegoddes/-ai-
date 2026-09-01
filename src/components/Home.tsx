@@ -1,19 +1,12 @@
 import { useState } from 'react'
 import { curriculum, totalLessons, totalQuizQuestions } from '../data/curriculum'
-import { PROTOTYPE_LESSON } from '../data/prototypeLesson'
-import type { Lesson, Module } from '../types'
 import { useProgress } from '../hooks/useProgress'
 import { ProgressRing } from './ProgressRing'
+import { LearningPath } from './LearningPath'
 
 type Props = {
   onOpenLesson: (moduleId: string, lessonId: string) => void
   onOpenGlossary: () => void
-}
-
-const difficultyStyle: Record<string, string> = {
-  קל: 'text-[var(--color-green)] bg-[color-mix(in_srgb,var(--color-green)_14%,transparent)]',
-  בינוני: 'text-[var(--color-amber)] bg-[color-mix(in_srgb,var(--color-amber)_14%,transparent)]',
-  מתקדם: 'text-[var(--color-red)] bg-[color-mix(in_srgb,var(--color-red)_14%,transparent)]',
 }
 
 export function Home({ onOpenLesson, onOpenGlossary }: Props) {
@@ -23,12 +16,16 @@ export function Home({ onOpenLesson, onOpenGlossary }: Props) {
   const flatLessons = curriculum.flatMap((m) => m.lessons.map((l) => ({ moduleId: m.id, lesson: l })))
   const completedCount = flatLessons.filter(({ lesson }) => isLessonComplete(lesson.id)).length
   const overallProgress = totalLessons ? completedCount / totalLessons : 0
+  const currentLessonId = flatLessons.find(({ lesson }, idx) => !isLessonComplete(lesson.id) && isUnlockedAt(idx))?.lesson.id ?? null
+
+  function isUnlockedAt(idx: number) {
+    if (idx === 0) return true
+    return isLessonComplete(flatLessons[idx - 1].lesson.id)
+  }
 
   function isUnlocked(moduleIndex: number, lessonIndex: number) {
     const idx = curriculum.slice(0, moduleIndex).reduce((s, m) => s + m.lessons.length, 0) + lessonIndex
-    if (idx === 0) return true
-    const prev = flatLessons[idx - 1]
-    return isLessonComplete(prev.lesson.id)
+    return isUnlockedAt(idx)
   }
 
   return (
@@ -111,114 +108,19 @@ export function Home({ onOpenLesson, onOpenGlossary }: Props) {
         </div>
       )}
 
-      <main className="max-w-5xl mx-auto px-5 pb-24 flex flex-col gap-14">
-        {curriculum.map((module, moduleIndex) => (
-          <ModuleSection
-            key={module.id}
-            module={module}
-            moduleIndex={moduleIndex}
-            isUnlocked={isUnlocked}
-            isLessonComplete={isLessonComplete}
-            getScore={getScore}
-            onOpenLesson={onOpenLesson}
-          />
-        ))}
+      <main className="max-w-5xl mx-auto px-5 pb-24">
+        <LearningPath
+          isUnlocked={isUnlocked}
+          isLessonComplete={isLessonComplete}
+          getScore={getScore}
+          onOpenLesson={onOpenLesson}
+          currentLessonId={currentLessonId}
+        />
 
-        <footer className="text-center text-xs text-[var(--color-text-faint)] pt-8 border-t border-[var(--color-border)]">
+        <footer className="text-center text-xs text-[var(--color-text-faint)] pt-14 mt-8 border-t border-[var(--color-border)]">
           נבנה כדי ללמד AI מהיסודות — בלי באזז, עם דוגמאות אמיתיות.
         </footer>
       </main>
     </div>
-  )
-}
-
-function ModuleSection({
-  module,
-  moduleIndex,
-  isUnlocked,
-  isLessonComplete,
-  getScore,
-  onOpenLesson,
-}: {
-  module: Module
-  moduleIndex: number
-  isUnlocked: (moduleIndex: number, lessonIndex: number) => boolean
-  isLessonComplete: (id: string) => boolean
-  getScore: (id: string) => { correct: number; total: number } | null
-  onOpenLesson: (moduleId: string, lessonId: string) => void
-}) {
-  const moduleDone = module.lessons.filter((l) => isLessonComplete(l.id)).length
-
-  return (
-    <section className="animate-pop-in">
-      <div className="flex items-center gap-4 mb-5">
-        <div
-          className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0 border"
-          style={{ background: `color-mix(in srgb, ${module.color} 14%, transparent)`, borderColor: `color-mix(in srgb, ${module.color} 30%, transparent)` }}
-        >
-          {module.icon}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-xl font-bold">{module.title}</h2>
-            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${difficultyStyle[module.difficulty]}`}>
-              {module.difficulty}
-            </span>
-          </div>
-          <p className="text-sm text-[var(--color-text-dim)] mt-0.5">{module.subtitle}</p>
-        </div>
-        <div className="text-xs text-[var(--color-text-faint)] shrink-0 hidden sm:block">
-          {moduleDone}/{module.lessons.length}
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-2.5 min-w-0">
-        {module.lessons.map((lesson: Lesson, lessonIndex: number) => {
-          const unlocked = isUnlocked(moduleIndex, lessonIndex)
-          const done = isLessonComplete(lesson.id)
-          const score = getScore(lesson.id)
-
-          return (
-            <button
-              key={lesson.id}
-              disabled={!unlocked}
-              onClick={() => onOpenLesson(module.id, lesson.id)}
-              className={`group flex items-center gap-4 text-right w-full min-w-0 rounded-xl border px-4 py-3.5 transition-all ${
-                unlocked
-                  ? 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-brand)] hover:bg-[var(--color-surface-hi)] cursor-pointer'
-                  : 'border-[var(--color-border)]/50 bg-[var(--color-surface)]/40 cursor-not-allowed opacity-50'
-              }`}
-            >
-              <div
-                className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
-                  done
-                    ? 'bg-[var(--color-green)] text-[#0a0a12]'
-                    : unlocked
-                      ? 'bg-[var(--color-surface-hi)] text-[var(--color-text)] group-hover:bg-[var(--color-brand)] group-hover:text-white transition-colors'
-                      : 'bg-[var(--color-surface-hi)] text-[var(--color-text-faint)]'
-                }`}
-              >
-                {done ? '✓' : unlocked ? lessonIndex + 1 : '🔒'}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <div className="font-medium truncate">{lesson.title}</div>
-                  {module.id === PROTOTYPE_LESSON.moduleId && lesson.id === PROTOTYPE_LESSON.lessonId && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[color-mix(in_srgb,var(--color-amber)_16%,transparent)] text-[var(--color-amber)] shrink-0">
-                      🧪 פורמט חדש
-                    </span>
-                  )}
-                </div>
-                <div className="text-xs text-[var(--color-text-faint)] mt-0.5">
-                  {lesson.minutes} דקות קריאה · {lesson.quiz.length} שאלות
-                  {score && ` · ${score.correct}/${score.total} בשאלון`}
-                </div>
-              </div>
-              {unlocked && <span className="text-[var(--color-text-faint)] group-hover:text-[var(--color-brand)] transition-colors">←</span>}
-            </button>
-          )
-        })}
-      </div>
-    </section>
   )
 }
