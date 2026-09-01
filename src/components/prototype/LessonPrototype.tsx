@@ -4,13 +4,15 @@ import type { Lesson } from '../../types'
 import { Quiz } from '../Quiz'
 import {
   applyApps,
-  applyReveal,
+  applyScenarioIntro,
   conceptCards,
   hook,
   prediction,
   sortItems,
   understandingChecks,
+  type ApplyVerdict,
   type ConceptCard,
+  type SortVerdict,
 } from '../../data/prototypeLesson'
 
 type Props = {
@@ -287,12 +289,18 @@ function ConceptCardBody({ card, moduleColor }: { card: ConceptCard; moduleColor
 
 // ---------- 4. Interactive: AI or not AI sorting ----------
 
-function InteractiveStage({ moduleColor, onNext, onBack }: { moduleColor: string; onNext: () => void; onBack: () => void }) {
-  const [answers, setAnswers] = useState<Record<string, boolean>>({})
+const VERDICT_LABEL: Record<SortVerdict, string> = {
+  ai: 'יש כאן AI',
+  'not-ai': 'אין כאן AI',
+  unclear: 'אין מספיק מידע כדי לדעת',
+}
 
-  function answer(id: string, guessAI: boolean) {
+function InteractiveStage({ moduleColor, onNext, onBack }: { moduleColor: string; onNext: () => void; onBack: () => void }) {
+  const [answers, setAnswers] = useState<Record<string, SortVerdict>>({})
+
+  function answer(id: string, guess: SortVerdict) {
     if (answers[id] !== undefined) return
-    setAnswers((prev) => ({ ...prev, [id]: guessAI }))
+    setAnswers((prev) => ({ ...prev, [id]: guess }))
   }
 
   const answeredCount = Object.keys(answers).length
@@ -302,9 +310,9 @@ function InteractiveStage({ moduleColor, onNext, onBack }: { moduleColor: string
     <div>
       <div className="mb-5">
         <div className="text-xs font-bold tracking-wide mb-2" style={{ color: moduleColor }}>
-          תרגול — AI או לא AI?
+          תרגול — AI, לא AI, או שאין מספיק מידע?
         </div>
-        <h2 className="text-xl font-bold leading-snug">לכל דוגמה, נחשו: יש כאן AI או לא?</h2>
+        <h2 className="text-xl font-bold leading-snug">לכל דוגמה, נחשו: איך היא בנויה מבפנים?</h2>
         <p className="text-sm text-[var(--color-text-faint)] mt-1">{answeredCount} / {sortItems.length} נבדקו</p>
       </div>
 
@@ -312,7 +320,7 @@ function InteractiveStage({ moduleColor, onNext, onBack }: { moduleColor: string
         {sortItems.map((item) => {
           const guessed = answers[item.id]
           const isRevealed = guessed !== undefined
-          const wasCorrect = isRevealed && guessed === item.isAI
+          const wasCorrect = isRevealed && guessed === item.verdict
 
           return (
             <div
@@ -328,21 +336,27 @@ function InteractiveStage({ moduleColor, onNext, onBack }: { moduleColor: string
               {!isRevealed ? (
                 <div className="flex gap-2 mt-3">
                   <button
-                    onClick={() => answer(item.id, true)}
-                    className="flex-1 rounded-lg border border-[var(--color-border)] hover:border-[var(--color-brand)] py-2 text-sm font-semibold transition-colors cursor-pointer"
+                    onClick={() => answer(item.id, 'ai')}
+                    className="flex-1 rounded-lg border border-[var(--color-border)] hover:border-[var(--color-brand)] py-2 text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
                   >
-                    🤖 יש כאן AI
+                    🤖 יש AI
                   </button>
                   <button
-                    onClick={() => answer(item.id, false)}
-                    className="flex-1 rounded-lg border border-[var(--color-border)] hover:border-[var(--color-brand)] py-2 text-sm font-semibold transition-colors cursor-pointer"
+                    onClick={() => answer(item.id, 'not-ai')}
+                    className="flex-1 rounded-lg border border-[var(--color-border)] hover:border-[var(--color-brand)] py-2 text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
                   >
-                    🙅 אין כאן AI
+                    🙅 אין AI
+                  </button>
+                  <button
+                    onClick={() => answer(item.id, 'unclear')}
+                    className="flex-1 rounded-lg border border-[var(--color-border)] hover:border-[var(--color-brand)] py-2 text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
+                  >
+                    🤷 אין מספיק מידע
                   </button>
                 </div>
               ) : (
                 <p className="text-sm text-[var(--color-text-dim)] mt-2 animate-pop-in">
-                  {wasCorrect ? '✅ נכון! ' : `↳ למעשה ${item.isAI ? 'כן יש כאן AI' : 'אין כאן AI'}. `}
+                  {wasCorrect ? '✅ נכון! ' : `↳ למעשה: ${VERDICT_LABEL[item.verdict]}. `}
                   {item.explanation}
                 </p>
               )}
@@ -357,6 +371,12 @@ function InteractiveStage({ moduleColor, onNext, onBack }: { moduleColor: string
 }
 
 // ---------- 5. Apply It ----------
+
+const APPLY_BADGE: Record<ApplyVerdict, { label: string; color: string }> = {
+  ai: { label: 'AI', color: 'var(--color-green)' },
+  'not-ai': { label: 'לא AI', color: 'var(--color-text-faint)' },
+  unclear: { label: 'תלוי!', color: 'var(--color-amber)' },
+}
 
 function ApplyStage({ moduleColor, onNext, onBack }: { moduleColor: string; onNext: () => void; onBack: () => void }) {
   const [picked, setPicked] = useState<Set<string>>(new Set())
@@ -375,30 +395,31 @@ function ApplyStage({ moduleColor, onNext, onBack }: { moduleColor: string; onNe
   return (
     <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 sm:p-8">
       <div className="text-xs font-bold tracking-wide mb-2" style={{ color: moduleColor }}>
-        תורכם — יישום אישי
+        תורכם — תרחיש חדש
       </div>
-      <h2 className="text-xl font-bold leading-snug mb-1">אילו מהאפליקציות בטלפון שלכם, לדעתכם, משתמשות ב-AI?</h2>
+      <h2 className="text-xl font-bold leading-snug mb-1">{applyScenarioIntro}</h2>
       <p className="text-sm text-[var(--color-text-faint)] mb-5">סמנו את מה שאתם חושבים, ואז בדקו את עצמכם</p>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
         {applyApps.map((app) => {
           const isPicked = picked.has(app.id)
           const showBadge = revealed
+          const badge = APPLY_BADGE[app.verdict]
           return (
             <button
               key={app.id}
               onClick={() => toggle(app.id)}
               className="rounded-xl border p-3 text-center transition-all cursor-pointer relative"
               style={{
-                borderColor: showBadge ? (app.usesAI ? 'var(--color-green)' : 'var(--color-text-faint)') : isPicked ? moduleColor : 'var(--color-border)',
+                borderColor: showBadge ? badge.color : isPicked ? moduleColor : 'var(--color-border)',
                 background: !showBadge && isPicked ? `color-mix(in srgb, ${moduleColor} 10%, transparent)` : 'var(--color-surface-hi)',
               }}
             >
               <div className="text-2xl mb-1">{app.icon}</div>
               <div className="text-xs font-semibold">{app.label}</div>
               {showBadge && (
-                <div className="text-[10px] mt-1 font-bold" style={{ color: app.usesAI ? 'var(--color-green)' : 'var(--color-text-faint)' }}>
-                  {app.usesAI ? 'משתמשת ב-AI' : 'לא AI'}
+                <div className="text-[10px] mt-1 font-bold" style={{ color: badge.color }}>
+                  {badge.label}
                 </div>
               )}
             </button>
@@ -415,9 +436,16 @@ function ApplyStage({ moduleColor, onNext, onBack }: { moduleColor: string; onNe
           🔍 בדקו את עצמכם
         </button>
       ) : (
-        <p className="mt-5 text-sm text-[var(--color-text-dim)] leading-relaxed animate-pop-in rounded-xl bg-[var(--color-surface-hi)] p-4">
-          {applyReveal}
-        </p>
+        <div className="mt-5 flex flex-col gap-2 animate-pop-in">
+          {applyApps.map((app) => (
+            <p key={app.id} className="text-sm text-[var(--color-text-dim)] leading-relaxed rounded-xl bg-[var(--color-surface-hi)] p-3">
+              <span className="font-semibold" style={{ color: APPLY_BADGE[app.verdict].color }}>
+                {app.icon} {app.label}:
+              </span>{' '}
+              {app.note}
+            </p>
+          ))}
+        </div>
       )}
 
       <NavRow onNext={onNext} onBack={onBack} moduleColor={moduleColor} nextLabel="לבדיקת הבנה ←" nextDisabled={!revealed} />
