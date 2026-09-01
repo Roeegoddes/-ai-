@@ -179,7 +179,10 @@ function ModulePath({
                 {done ? '✓' : isCurrent ? '▶' : unlocked ? lessonIndex + 1 : '🔒'}
               </button>
 
-              <div className="mt-2 text-center">
+              <div
+                className="mt-3 text-center rounded-lg px-2 py-1.5"
+                style={{ background: 'color-mix(in srgb, var(--color-bg) 92%, transparent)' }}
+              >
                 <div className="flex items-center justify-center gap-1">
                   <span
                     className={`text-xs leading-snug ${isCurrent ? 'font-bold' : 'font-medium'} ${unlocked ? 'text-[var(--color-text)]' : 'text-[var(--color-text-faint)]'}`}
