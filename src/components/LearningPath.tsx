@@ -70,7 +70,10 @@ function ModulePath({
 }) {
   const moduleDone = module.lessons.filter((l) => isLessonComplete(l.id)).length
   const moduleFullyDone = moduleDone === module.lessons.length
-  const firstLessonUnlocked = isUnlocked(moduleIndex, 0)
+  // A completed lesson must always stay reachable, even if lessons inserted
+  // before it in a later curriculum edit are themselves still incomplete —
+  // positional sequencing should never be able to re-lock finished work.
+  const firstLessonUnlocked = isUnlocked(moduleIndex, 0) || isLessonComplete(module.lessons[0].id)
 
   return (
     <section className="animate-pop-in">
@@ -102,8 +105,9 @@ function ModulePath({
       </RailRow>
 
       {module.lessons.map((lesson: Lesson, lessonIndex: number) => {
-        const unlocked = isUnlocked(moduleIndex, lessonIndex)
         const done = isLessonComplete(lesson.id)
+        // Same rule as above: completion always overrides a positional lock.
+        const unlocked = isUnlocked(moduleIndex, lessonIndex) || done
         const score = getScore(lesson.id)
         const isCurrent = lesson.id === currentLessonId
         const isPrototype = module.id === PROTOTYPE_LESSON.moduleId && lesson.id === PROTOTYPE_LESSON.lessonId
