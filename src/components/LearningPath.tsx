@@ -39,14 +39,14 @@ export function LearningPath({ isLessonComplete, getScore, isUnlocked, onOpenLes
 // One row of the rail: a marker in a fixed-width column (with a line continuing
 // below it into the next row), and free-flowing content beside it. Content drives
 // the row's height, so the marker/line always line up — no coordinate math needed.
-function RailRow({ marker, lineColor, children }: { marker: ReactNode; lineColor: string | null; children: ReactNode }) {
+function RailRow({ marker, lineColor, pad, children }: { marker: ReactNode; lineColor: string | null; pad?: string; children: ReactNode }) {
   return (
     <div className="flex gap-4">
       <div className="w-11 shrink-0 flex flex-col items-center">
         {marker}
         {lineColor && <div className="w-[2.5px] flex-1 my-1.5 rounded-full" style={{ background: lineColor }} />}
       </div>
-      <div className="flex-1 min-w-0 pb-6">{children}</div>
+      <div className={`flex-1 min-w-0 ${pad ?? 'pb-6'}`}>{children}</div>
     </div>
   )
 }
@@ -69,6 +69,7 @@ function ModulePath({
   currentLessonId: string | null
 }) {
   const moduleDone = module.lessons.filter((l) => isLessonComplete(l.id)).length
+  const moduleFullyDone = moduleDone === module.lessons.length
   const firstLessonUnlocked = isUnlocked(moduleIndex, 0)
 
   return (
@@ -112,17 +113,24 @@ function ModulePath({
           <RailRow
             key={lesson.id}
             lineColor={isLast ? null : done ? module.color : 'var(--color-border)'}
+            pad={isCurrent ? 'pb-7' : done ? 'pb-3' : 'pb-5'}
             marker={
               <div
                 aria-hidden="true"
-                className={`w-11 h-11 rounded-full flex items-center justify-center text-base font-bold shrink-0 ${
-                  isCurrent ? 'animate-pulse-ring' : ''
+                className={`rounded-full flex items-center justify-center font-bold shrink-0 transition-all ${
+                  isCurrent ? 'w-14 h-14 text-xl animate-pulse-ring' : done ? 'w-8 h-8 text-xs' : 'w-11 h-11 text-base'
                 }`}
                 style={
                   {
-                    background: done || isCurrent ? module.color : unlocked ? 'var(--color-surface)' : 'var(--color-surface-hi)',
-                    border: `2.5px solid ${done || unlocked ? module.color : 'var(--color-text-faint)'}`,
-                    color: done || isCurrent ? '#0a0a12' : unlocked ? 'var(--color-text)' : 'var(--color-text-faint)',
+                    background: isCurrent
+                      ? module.color
+                      : done
+                        ? `color-mix(in srgb, ${module.color} 45%, var(--color-surface))`
+                        : unlocked
+                          ? 'var(--color-surface)'
+                          : 'var(--color-surface-hi)',
+                    border: `${isCurrent ? 3 : 2}px solid ${done ? `color-mix(in srgb, ${module.color} 60%, transparent)` : unlocked ? module.color : 'var(--color-text-faint)'}`,
+                    color: isCurrent ? '#0a0a12' : done ? module.color : unlocked ? 'var(--color-text)' : 'var(--color-text-faint)',
                     '--pulse-color': module.color,
                   } as CSSProperties
                 }
@@ -131,41 +139,91 @@ function ModulePath({
               </div>
             }
           >
-            <button
-              disabled={!unlocked}
-              onClick={() => onOpenLesson(module.id, lesson.id)}
-              className={`w-full text-right rounded-2xl border px-4 py-3.5 transition-all ${
-                unlocked ? 'cursor-pointer hover:-translate-y-0.5' : 'cursor-not-allowed opacity-55'
-              }`}
-              style={{
-                borderColor: isCurrent ? module.color : done ? `color-mix(in srgb, ${module.color} 35%, var(--color-border))` : 'var(--color-border)',
-                borderWidth: isCurrent ? 2 : 1,
-                background: isCurrent ? `color-mix(in srgb, ${module.color} 7%, var(--color-surface))` : 'var(--color-surface)',
-              }}
-            >
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className={`text-sm leading-snug ${isCurrent ? 'font-bold' : 'font-medium'} ${unlocked ? 'text-[var(--color-text)]' : 'text-[var(--color-text-faint)]'}`}>
+            {isCurrent ? (
+              // dominant card: the active step in the journey
+              <div className="pt-1">
+                <div className="text-[11px] font-bold tracking-wide mb-1.5" style={{ color: module.color }}>
+                  השיעור הבא במסע שלכם
+                </div>
+                <button
+                  onClick={() => onOpenLesson(module.id, lesson.id)}
+                  className="w-full text-right rounded-2xl border-2 px-5 py-4 cursor-pointer transition-all hover:-translate-y-0.5"
+                  style={{
+                    borderColor: module.color,
+                    background: `color-mix(in srgb, ${module.color} 9%, var(--color-surface))`,
+                    boxShadow: `0 8px 24px -8px color-mix(in srgb, ${module.color} 35%, transparent)`,
+                  }}
+                >
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-base sm:text-lg font-bold leading-snug text-[var(--color-text)]">{lesson.title}</span>
+                    {isPrototype && (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[color-mix(in_srgb,var(--color-amber)_18%,transparent)] text-[var(--color-amber)] shrink-0">
+                        🧪 פורמט חדש
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-[var(--color-text-dim)] mt-1.5">
+                    {lesson.minutes} דקות קריאה · {lesson.quiz.length} שאלות
+                  </div>
+                  <div
+                    className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full text-white mt-3"
+                    style={{ background: module.color }}
+                  >
+                    ▶ התחילו כאן
+                  </div>
+                </button>
+              </div>
+            ) : done ? (
+              // compact, subtle: a step already behind you
+              <button
+                disabled={!unlocked}
+                onClick={() => onOpenLesson(module.id, lesson.id)}
+                className="w-full flex items-center justify-between gap-3 text-right rounded-lg px-3 py-1.5 cursor-pointer transition-colors hover:bg-[var(--color-surface)]"
+              >
+                <span className="text-sm text-[var(--color-text-dim)] leading-snug truncate">{lesson.title}</span>
+                {score && (
+                  <span className="text-[11px] text-[var(--color-text-faint)] shrink-0">
+                    {score.correct}/{score.total}
+                  </span>
+                )}
+              </button>
+            ) : (
+              // muted: a step still ahead, not yet reachable in detail
+              <button
+                disabled={!unlocked}
+                onClick={() => onOpenLesson(module.id, lesson.id)}
+                className={`w-full text-right rounded-xl border px-4 py-3 transition-all ${
+                  unlocked ? 'cursor-pointer hover:-translate-y-0.5 hover:border-[var(--color-brand)]' : 'cursor-not-allowed'
+                }`}
+                style={{
+                  borderColor: 'var(--color-border)',
+                  background: 'var(--color-surface)',
+                  opacity: unlocked ? 1 : 0.5,
+                }}
+              >
+                <span className={`text-sm leading-snug font-medium ${unlocked ? 'text-[var(--color-text)]' : 'text-[var(--color-text-faint)]'}`}>
                   {lesson.title}
                 </span>
-                {isCurrent && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white shrink-0" style={{ background: module.color }}>
-                    ▶ התחילו כאן
-                  </span>
+                {unlocked && (
+                  <div className="text-xs text-[var(--color-text-faint)] mt-1">
+                    {lesson.minutes} דקות קריאה · {lesson.quiz.length} שאלות
+                  </div>
                 )}
-                {isPrototype && (
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[color-mix(in_srgb,var(--color-amber)_18%,transparent)] text-[var(--color-amber)] shrink-0">
-                    🧪 פורמט חדש
-                  </span>
-                )}
-              </div>
-              <div className="text-xs text-[var(--color-text-faint)] mt-1">
-                {lesson.minutes} דקות קריאה · {lesson.quiz.length} שאלות
-                {score && ` · ✓ ${score.correct}/${score.total}`}
-              </div>
-            </button>
+              </button>
+            )}
           </RailRow>
         )
       })}
+
+      {moduleFullyDone && (
+        <div className="flex items-center gap-3 pb-10 pt-1">
+          <div className="h-px flex-1" style={{ background: `linear-gradient(to left, color-mix(in srgb, ${module.color} 50%, transparent), transparent)` }} />
+          <span className="text-xs font-bold tracking-wide shrink-0" style={{ color: module.color }}>
+            ✦ שלב הושלם
+          </span>
+          <div className="h-px flex-1" style={{ background: `linear-gradient(to right, color-mix(in srgb, ${module.color} 50%, transparent), transparent)` }} />
+        </div>
+      )}
     </section>
   )
 }

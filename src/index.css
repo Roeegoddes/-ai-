@@ -74,11 +74,11 @@ body {
 }
 
 @keyframes pulse-ring {
-  0%, 100% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--pulse-color, var(--color-brand)) 25%, transparent); }
-  50% { box-shadow: 0 0 0 12px color-mix(in srgb, var(--pulse-color, var(--color-brand)) 8%, transparent); }
+  0%, 100% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--pulse-color, var(--color-brand)) 18%, transparent); }
+  50% { box-shadow: 0 0 0 9px color-mix(in srgb, var(--pulse-color, var(--color-brand)) 6%, transparent); }
 }
 .animate-pulse-ring {
-  animation: pulse-ring 2.2s ease-in-out infinite;
+  animation: pulse-ring 3.2s ease-in-out infinite;
 }
 
 @keyframes pop-in {
