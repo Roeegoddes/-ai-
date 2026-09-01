@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { curriculum } from '../data/curriculum'
 import { PROTOTYPE_LESSON } from '../data/prototypeLesson'
 import type { Lesson, Module } from '../types'
@@ -17,15 +17,9 @@ const difficultyStyle: Record<string, string> = {
   מתקדם: 'text-[var(--color-red)] bg-[color-mix(in_srgb,var(--color-red)_14%,transparent)]',
 }
 
-const PATH_WIDTH = 320
-const ROW_HEIGHT = 156
-const NODE_SIZE = 64
-// zigzag amplitude cycle (px offset from center), repeats every 8 nodes
-const OFFSETS = [0, 52, 80, 52, 0, -52, -80, -52]
-
 export function LearningPath({ isLessonComplete, getScore, isUnlocked, onOpenLesson, currentLessonId }: Props) {
   return (
-    <div className="flex flex-col gap-16">
+    <div className="max-w-2xl mx-auto flex flex-col">
       {curriculum.map((module, moduleIndex) => (
         <ModulePath
           key={module.id}
@@ -38,6 +32,21 @@ export function LearningPath({ isLessonComplete, getScore, isUnlocked, onOpenLes
           currentLessonId={currentLessonId}
         />
       ))}
+    </div>
+  )
+}
+
+// One row of the rail: a marker in a fixed-width column (with a line continuing
+// below it into the next row), and free-flowing content beside it. Content drives
+// the row's height, so the marker/line always line up — no coordinate math needed.
+function RailRow({ marker, lineColor, children }: { marker: ReactNode; lineColor: string | null; children: ReactNode }) {
+  return (
+    <div className="flex gap-4">
+      <div className="w-11 shrink-0 flex flex-col items-center">
+        {marker}
+        {lineColor && <div className="w-[2.5px] flex-1 my-1.5 rounded-full" style={{ background: lineColor }} />}
+      </div>
+      <div className="flex-1 min-w-0 pb-6">{children}</div>
     </div>
   )
 }
@@ -60,157 +69,103 @@ function ModulePath({
   currentLessonId: string | null
 }) {
   const moduleDone = module.lessons.filter((l) => isLessonComplete(l.id)).length
-  const pathHeight = (module.lessons.length - 1) * ROW_HEIGHT + NODE_SIZE
-
-  const centers = module.lessons.map((_, i) => ({
-    x: PATH_WIDTH / 2 + OFFSETS[i % OFFSETS.length],
-    y: i * ROW_HEIGHT + NODE_SIZE / 2,
-  }))
-
-  // how many segments are "traversed" (both endpoints completed, or leading up to the current node)
-  let litSegments = 0
-  for (let i = 0; i < module.lessons.length - 1; i++) {
-    if (isLessonComplete(module.lessons[i].id)) litSegments++
-    else break
-  }
-
   const firstLessonUnlocked = isUnlocked(moduleIndex, 0)
-  const connectorLit = firstLessonUnlocked
 
   return (
     <section className="animate-pop-in">
-      <div
-        className="flex items-center gap-4 mx-auto rounded-2xl border px-5 py-4"
-        style={{
-          maxWidth: PATH_WIDTH + 40,
-          background: `color-mix(in srgb, ${module.color} 10%, var(--color-surface))`,
-          borderColor: `color-mix(in srgb, ${module.color} 30%, transparent)`,
-        }}
-      >
-        <div
-          className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0"
-          style={{ background: `color-mix(in srgb, ${module.color} 20%, transparent)` }}
-        >
-          {module.icon}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-base font-bold">{module.title}</h2>
-            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${difficultyStyle[module.difficulty]}`}>
-              {module.difficulty}
-            </span>
+      <RailRow
+        marker={
+          <div
+            className="w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0"
+            style={{ background: `color-mix(in srgb, ${module.color} 20%, transparent)` }}
+          >
+            {module.icon}
           </div>
-          <p className="text-xs text-[var(--color-text-dim)] mt-0.5 truncate">{module.subtitle}</p>
+        }
+        lineColor={firstLessonUnlocked ? module.color : 'var(--color-border)'}
+      >
+        <div className="flex items-start justify-between gap-3 pt-1">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-lg font-bold">{module.title}</h2>
+              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${difficultyStyle[module.difficulty]}`}>
+                {module.difficulty}
+              </span>
+            </div>
+            <p className="text-sm text-[var(--color-text-dim)] mt-0.5">{module.subtitle}</p>
+          </div>
+          <div className="text-xs font-semibold text-[var(--color-text-faint)] shrink-0 pt-1.5">
+            {moduleDone}/{module.lessons.length}
+          </div>
         </div>
-        <div className="text-xs font-semibold text-[var(--color-text-faint)] shrink-0">
-          {moduleDone}/{module.lessons.length}
-        </div>
-      </div>
+      </RailRow>
 
-      {/* connector from the module card into the first node of the path */}
-      <div
-        className="mx-auto"
-        style={{
-          width: 0,
-          height: 28,
-          borderLeft: connectorLit ? `4px solid ${module.color}` : '4px dashed var(--color-text-faint)',
-          opacity: connectorLit ? 1 : 0.35,
-        }}
-      />
+      {module.lessons.map((lesson: Lesson, lessonIndex: number) => {
+        const unlocked = isUnlocked(moduleIndex, lessonIndex)
+        const done = isLessonComplete(lesson.id)
+        const score = getScore(lesson.id)
+        const isCurrent = lesson.id === currentLessonId
+        const isPrototype = module.id === PROTOTYPE_LESSON.moduleId && lesson.id === PROTOTYPE_LESSON.lessonId
+        const isLast = lessonIndex === module.lessons.length - 1
 
-      <div className="relative mx-auto" style={{ width: PATH_WIDTH, height: pathHeight }}>
-        <svg
-          className="absolute inset-0 pointer-events-none"
-          width={PATH_WIDTH}
-          height={pathHeight}
-          viewBox={`0 0 ${PATH_WIDTH} ${pathHeight}`}
-        >
-          {centers.slice(0, -1).map((p0, i) => {
-            const p1 = centers[i + 1]
-            const midY = (p0.y + p1.y) / 2
-            const lit = i < litSegments
-            return (
-              <path
-                key={i}
-                d={`M ${p0.x} ${p0.y} C ${p0.x} ${midY}, ${p1.x} ${midY}, ${p1.x} ${p1.y}`}
-                fill="none"
-                stroke={lit ? module.color : 'var(--color-text-faint)'}
-                strokeOpacity={lit ? 1 : 0.35}
-                strokeWidth={5}
-                strokeLinecap="round"
-                strokeDasharray={lit ? undefined : '2 12'}
-              />
-            )
-          })}
-        </svg>
-
-        {module.lessons.map((lesson: Lesson, lessonIndex: number) => {
-          const unlocked = isUnlocked(moduleIndex, lessonIndex)
-          const done = isLessonComplete(lesson.id)
-          const score = getScore(lesson.id)
-          const isCurrent = lesson.id === currentLessonId
-          const isPrototype = module.id === PROTOTYPE_LESSON.moduleId && lesson.id === PROTOTYPE_LESSON.lessonId
-          const center = centers[lessonIndex]
-
-          return (
-            <div
-              key={lesson.id}
-              className="absolute flex flex-col items-center"
-              style={{ left: center.x, top: center.y, transform: 'translate(-50%, -50%)', width: 140 }}
-            >
-              <button
-                disabled={!unlocked}
-                onClick={() => onOpenLesson(module.id, lesson.id)}
-                title={lesson.title}
-                className={`relative rounded-full flex items-center justify-center text-lg font-bold shrink-0 transition-transform ${
-                  unlocked ? 'cursor-pointer hover:scale-105 active:scale-95' : 'cursor-not-allowed'
-                } ${isCurrent ? 'animate-pulse-ring' : ''}`}
+        return (
+          <RailRow
+            key={lesson.id}
+            lineColor={isLast ? null : done ? module.color : 'var(--color-border)'}
+            marker={
+              <div
+                aria-hidden="true"
+                className={`w-11 h-11 rounded-full flex items-center justify-center text-base font-bold shrink-0 ${
+                  isCurrent ? 'animate-pulse-ring' : ''
+                }`}
                 style={
                   {
-                    width: isCurrent ? NODE_SIZE + 10 : NODE_SIZE,
-                    height: isCurrent ? NODE_SIZE + 10 : NODE_SIZE,
                     background: done || isCurrent ? module.color : unlocked ? 'var(--color-surface)' : 'var(--color-surface-hi)',
-                    border: `3px solid ${done || unlocked ? module.color : 'var(--color-text-faint)'}`,
+                    border: `2.5px solid ${done || unlocked ? module.color : 'var(--color-text-faint)'}`,
                     color: done || isCurrent ? '#0a0a12' : unlocked ? 'var(--color-text)' : 'var(--color-text-faint)',
                     '--pulse-color': module.color,
                   } as CSSProperties
                 }
               >
                 {done ? '✓' : isCurrent ? '▶' : unlocked ? lessonIndex + 1 : '🔒'}
-              </button>
-
-              <div
-                className="mt-3 text-center rounded-lg px-2 py-1.5"
-                style={{ background: 'color-mix(in srgb, var(--color-bg) 92%, transparent)' }}
-              >
-                <div className="flex items-center justify-center gap-1">
-                  <span
-                    className={`text-xs leading-snug ${isCurrent ? 'font-bold' : 'font-medium'} ${unlocked ? 'text-[var(--color-text)]' : 'text-[var(--color-text-faint)]'}`}
-                  >
-                    {lesson.title}
+              </div>
+            }
+          >
+            <button
+              disabled={!unlocked}
+              onClick={() => onOpenLesson(module.id, lesson.id)}
+              className={`w-full text-right rounded-2xl border px-4 py-3.5 transition-all ${
+                unlocked ? 'cursor-pointer hover:-translate-y-0.5' : 'cursor-not-allowed opacity-55'
+              }`}
+              style={{
+                borderColor: isCurrent ? module.color : done ? `color-mix(in srgb, ${module.color} 35%, var(--color-border))` : 'var(--color-border)',
+                borderWidth: isCurrent ? 2 : 1,
+                background: isCurrent ? `color-mix(in srgb, ${module.color} 7%, var(--color-surface))` : 'var(--color-surface)',
+              }}
+            >
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`text-sm leading-snug ${isCurrent ? 'font-bold' : 'font-medium'} ${unlocked ? 'text-[var(--color-text)]' : 'text-[var(--color-text-faint)]'}`}>
+                  {lesson.title}
+                </span>
+                {isCurrent && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white shrink-0" style={{ background: module.color }}>
+                    ▶ התחילו כאן
                   </span>
-                </div>
+                )}
                 {isPrototype && (
-                  <span className="inline-block mt-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[color-mix(in_srgb,var(--color-amber)_18%,transparent)] text-[var(--color-amber)]">
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[color-mix(in_srgb,var(--color-amber)_18%,transparent)] text-[var(--color-amber)] shrink-0">
                     🧪 פורמט חדש
                   </span>
                 )}
-                {isCurrent ? (
-                  <div className="text-[11px] font-bold mt-0.5" style={{ color: module.color }}>
-                    התחילו כאן ←
-                  </div>
-                ) : (
-                  unlocked && (
-                    <div className="text-[10px] text-[var(--color-text-faint)] mt-0.5">
-                      {score ? `✓ ${score.correct}/${score.total}` : `${lesson.quiz.length} שאלות`}
-                    </div>
-                  )
-                )}
               </div>
-            </div>
-          )
-        })}
-      </div>
+              <div className="text-xs text-[var(--color-text-faint)] mt-1">
+                {lesson.minutes} דקות קריאה · {lesson.quiz.length} שאלות
+                {score && ` · ✓ ${score.correct}/${score.total}`}
+              </div>
+            </button>
+          </RailRow>
+        )
+      })}
     </section>
   )
 }
