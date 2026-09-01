@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { curriculum } from '../data/curriculum'
 import { PROTOTYPE_LESSON } from '../data/prototypeLesson'
 import type { Lesson, Module } from '../types'
@@ -73,10 +74,13 @@ function ModulePath({
     else break
   }
 
+  const firstLessonUnlocked = isUnlocked(moduleIndex, 0)
+  const connectorLit = firstLessonUnlocked
+
   return (
     <section className="animate-pop-in">
       <div
-        className="flex items-center gap-4 mb-8 mx-auto rounded-2xl border px-5 py-4"
+        className="flex items-center gap-4 mx-auto rounded-2xl border px-5 py-4"
         style={{
           maxWidth: PATH_WIDTH + 40,
           background: `color-mix(in srgb, ${module.color} 10%, var(--color-surface))`,
@@ -103,7 +107,18 @@ function ModulePath({
         </div>
       </div>
 
-      <div className="relative mx-auto mt-20" style={{ width: PATH_WIDTH, height: pathHeight }}>
+      {/* connector from the module card into the first node of the path */}
+      <div
+        className="mx-auto"
+        style={{
+          width: 0,
+          height: 28,
+          borderLeft: connectorLit ? `4px solid ${module.color}` : '4px dashed var(--color-text-faint)',
+          opacity: connectorLit ? 1 : 0.35,
+        }}
+      />
+
+      <div className="relative mx-auto" style={{ width: PATH_WIDTH, height: pathHeight }}>
         <svg
           className="absolute inset-0 pointer-events-none"
           width={PATH_WIDTH}
@@ -143,38 +158,32 @@ function ModulePath({
               className="absolute flex flex-col items-center"
               style={{ left: center.x, top: center.y, transform: 'translate(-50%, -50%)', width: 128 }}
             >
-              {isCurrent && (
-                <div className="absolute -top-9 text-xs font-bold px-2.5 py-1 rounded-full text-white animate-float whitespace-nowrap" style={{ background: module.color }}>
-                  התחילו כאן ↓
-                </div>
-              )}
-
               <button
                 disabled={!unlocked}
                 onClick={() => onOpenLesson(module.id, lesson.id)}
                 title={lesson.title}
                 className={`relative rounded-full flex items-center justify-center text-lg font-bold shrink-0 transition-transform ${
                   unlocked ? 'cursor-pointer hover:scale-105 active:scale-95' : 'cursor-not-allowed'
-                }`}
-                style={{
-                  width: NODE_SIZE,
-                  height: NODE_SIZE,
-                  background: done
-                    ? module.color
-                    : unlocked
-                      ? 'var(--color-surface)'
-                      : 'var(--color-surface-hi)',
-                  border: `3px solid ${done || unlocked ? module.color : 'var(--color-text-faint)'}`,
-                  boxShadow: isCurrent ? `0 0 0 6px color-mix(in srgb, ${module.color} 22%, transparent)` : undefined,
-                  color: done ? '#0a0a12' : unlocked ? 'var(--color-text)' : 'var(--color-text-faint)',
-                }}
+                } ${isCurrent ? 'animate-pulse-ring' : ''}`}
+                style={
+                  {
+                    width: isCurrent ? NODE_SIZE + 10 : NODE_SIZE,
+                    height: isCurrent ? NODE_SIZE + 10 : NODE_SIZE,
+                    background: done || isCurrent ? module.color : unlocked ? 'var(--color-surface)' : 'var(--color-surface-hi)',
+                    border: `3px solid ${done || unlocked ? module.color : 'var(--color-text-faint)'}`,
+                    color: done || isCurrent ? '#0a0a12' : unlocked ? 'var(--color-text)' : 'var(--color-text-faint)',
+                    '--pulse-color': module.color,
+                  } as CSSProperties
+                }
               >
-                {done ? '✓' : unlocked ? lessonIndex + 1 : '🔒'}
+                {done ? '✓' : isCurrent ? '▶' : unlocked ? lessonIndex + 1 : '🔒'}
               </button>
 
               <div className="mt-2 text-center">
                 <div className="flex items-center justify-center gap-1">
-                  <span className={`text-xs font-medium leading-snug line-clamp-2 ${unlocked ? 'text-[var(--color-text)]' : 'text-[var(--color-text-faint)]'}`}>
+                  <span
+                    className={`text-xs leading-snug line-clamp-2 ${isCurrent ? 'font-bold' : 'font-medium'} ${unlocked ? 'text-[var(--color-text)]' : 'text-[var(--color-text-faint)]'}`}
+                  >
                     {lesson.title}
                   </span>
                 </div>
@@ -183,10 +192,16 @@ function ModulePath({
                     🧪 פורמט חדש
                   </span>
                 )}
-                {unlocked && (
-                  <div className="text-[10px] text-[var(--color-text-faint)] mt-0.5">
-                    {score ? `✓ ${score.correct}/${score.total}` : `${lesson.quiz.length} שאלות`}
+                {isCurrent ? (
+                  <div className="text-[11px] font-bold mt-0.5" style={{ color: module.color }}>
+                    התחילו כאן ←
                   </div>
+                ) : (
+                  unlocked && (
+                    <div className="text-[10px] text-[var(--color-text-faint)] mt-0.5">
+                      {score ? `✓ ${score.correct}/${score.total}` : `${lesson.quiz.length} שאלות`}
+                    </div>
+                  )
                 )}
               </div>
             </div>
