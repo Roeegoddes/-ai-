@@ -11,7 +11,7 @@ type Route = { screen: 'home' } | { screen: 'glossary' } | { screen: 'lesson'; m
 
 function App() {
   const [route, setRoute] = useState<Route>({ screen: 'home' })
-  const { markLessonComplete } = useProgress()
+  const { markLessonComplete, getAskedIds, recordQuizAttempt } = useProgress()
 
   function openLesson(moduleId: string, lessonId: string) {
     setRoute({ screen: 'lesson', moduleId, lessonId })
@@ -60,6 +60,8 @@ function App() {
         onBack={goHome}
         onComplete={(correct, total) => markLessonComplete(lesson.id, correct, total)}
         onNextLesson={nextLessonRef ? () => openLesson(nextLessonRef.moduleId, nextLessonRef.lessonId) : null}
+        getAskedIds={getAskedIds}
+        recordQuizAttempt={recordQuizAttempt}
       />
     )
   }
@@ -74,6 +76,8 @@ function App() {
       onBack={goHome}
       onComplete={(correct, total) => markLessonComplete(lesson.id, correct, total)}
       onNextLesson={nextLessonRef ? () => openLesson(nextLessonRef.moduleId, nextLessonRef.lessonId) : null}
+      getAskedIds={getAskedIds}
+      recordQuizAttempt={recordQuizAttempt}
     />
   )
 }

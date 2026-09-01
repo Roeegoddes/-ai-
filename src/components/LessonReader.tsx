@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { curriculum } from '../data/curriculum'
 import { lessonEnrichments, type AlgoTraceData, type ApplicationCheckData, type GigoDemoData } from '../data/lessonEnrichments'
 import { useProgress } from '../hooks/useProgress'
+import { MASTERY_QUESTION_COUNT } from '../lib/quiz'
 import type { Lesson, QuizQuestion } from '../types'
 
 const STEP_ICONS = ['💡', '🔍', '🧩', '🎯', '📌', '✨', '🚀', '🔑', '📈', '🌐']
@@ -128,7 +129,7 @@ export function LessonReader({ lesson, moduleColor, onDone }: Props) {
           className="flex-1 rounded-xl text-white font-bold py-3 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           style={{ background: GATED_KINDS.has(step.kind) && step.kind !== 'algo-trace' ? 'var(--color-brand)' : moduleColor }}
         >
-          {isLast ? `בואו נבדוק הבנה — ${lesson.quiz.length} שאלות ←` : 'הבא ←'}
+          {isLast ? `בואו נבדוק הבנה — ${Math.min(MASTERY_QUESTION_COUNT, lesson.quiz.length)} שאלות ←` : 'הבא ←'}
         </button>
       </div>
 

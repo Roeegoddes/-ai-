@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Lesson, Module } from '../types'
 import { Quiz } from './Quiz'
 import { LessonReader } from './LessonReader'
+import { selectQuizAttempt, type QuizAttempt } from '../lib/quiz'
 
 type Props = {
   module: Module
@@ -11,13 +12,35 @@ type Props = {
   onBack: () => void
   onComplete: (correct: number, total: number) => void
   onNextLesson: (() => void) | null
+  getAskedIds: (lessonId: string) => string[]
+  recordQuizAttempt: (lessonId: string, askedIds: string[]) => void
 }
 
 type Stage = 'reading' | 'quiz' | 'result'
 
-export function LessonPage({ module, lesson, lessonNumber, totalInModule, onBack, onComplete, onNextLesson }: Props) {
+export function LessonPage({
+  module,
+  lesson,
+  lessonNumber,
+  totalInModule,
+  onBack,
+  onComplete,
+  onNextLesson,
+  getAskedIds,
+  recordQuizAttempt,
+}: Props) {
   const [stage, setStage] = useState<Stage>('reading')
   const [result, setResult] = useState<{ correct: number; total: number } | null>(null)
+  const [attempt, setAttempt] = useState<QuizAttempt | null>(null)
+
+  useEffect(() => {
+    if (attempt) recordQuizAttempt(lesson.id, attempt.askedIds)
+  }, [attempt, lesson.id, recordQuizAttempt])
+
+  function startQuiz() {
+    setAttempt(selectQuizAttempt(lesson.quiz, getAskedIds(lesson.id)))
+    setStage('quiz')
+  }
 
   function handleQuizFinish(correct: number, total: number) {
     setResult({ correct, total })
@@ -42,19 +65,19 @@ export function LessonPage({ module, lesson, lessonNumber, totalInModule, onBack
         </div>
 
         {stage === 'reading' && (
-          <LessonReader lesson={lesson} moduleColor={module.color} onDone={() => setStage('quiz')} />
+          <LessonReader lesson={lesson} moduleColor={module.color} onDone={startQuiz} />
         )}
 
-        {stage === 'quiz' && (
+        {stage === 'quiz' && attempt && (
           <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/60 p-6">
-            <Quiz questions={lesson.quiz} onFinish={handleQuizFinish} />
+            <Quiz questions={attempt.questions} onFinish={handleQuizFinish} />
           </div>
         )}
 
         {stage === 'result' && result && (
           <ResultScreen
             result={result}
-            onRetry={() => setStage('quiz')}
+            onRetry={startQuiz}
             onBack={onBack}
             onNextLesson={onNextLesson}
           />

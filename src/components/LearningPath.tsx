@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { curriculum } from '../data/curriculum'
 import { PROTOTYPE_LESSON } from '../data/prototypeLesson'
+import { MASTERY_QUESTION_COUNT } from '../lib/quiz'
 import type { Lesson, Module } from '../types'
 
 type Props = {
@@ -167,7 +168,7 @@ function ModulePath({
                     )}
                   </div>
                   <div className="text-xs text-[var(--color-text-dim)] mt-1.5">
-                    {lesson.minutes} דקות קריאה · {lesson.quiz.length} שאלות
+                    {lesson.minutes} דקות קריאה · {Math.min(MASTERY_QUESTION_COUNT, lesson.quiz.length)} שאלות
                   </div>
                   <div
                     className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full text-white mt-3"
@@ -210,7 +211,7 @@ function ModulePath({
                 </span>
                 {unlocked && (
                   <div className="text-xs text-[var(--color-text-faint)] mt-1">
-                    {lesson.minutes} דקות קריאה · {lesson.quiz.length} שאלות
+                    {lesson.minutes} דקות קריאה · {Math.min(MASTERY_QUESTION_COUNT, lesson.quiz.length)} שאלות
                   </div>
                 )}
               </button>

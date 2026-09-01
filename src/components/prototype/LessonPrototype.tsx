@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { curriculum } from '../../data/curriculum'
 import type { Lesson } from '../../types'
 import { Quiz } from '../Quiz'
+import { selectQuizAttempt, type QuizAttempt } from '../../lib/quiz'
 import {
   applyApps,
   applyScenarioIntro,
@@ -21,6 +22,8 @@ type Props = {
   onBack: () => void
   onComplete: (correct: number, total: number) => void
   onNextLesson: (() => void) | null
+  getAskedIds: (lessonId: string) => string[]
+  recordQuizAttempt: (lessonId: string, askedIds: string[]) => void
 }
 
 const STAGES = [
@@ -34,7 +37,7 @@ const STAGES = [
   { key: 'mastery', icon: '🏆', label: 'שליטה' },
 ] as const
 
-export function LessonPrototype({ lesson, moduleColor, onBack, onComplete, onNextLesson }: Props) {
+export function LessonPrototype({ lesson, moduleColor, onBack, onComplete, onNextLesson, getAskedIds, recordQuizAttempt }: Props) {
   const [stageIndex, setStageIndex] = useState(0)
   const stage = STAGES[stageIndex]
 
@@ -95,6 +98,8 @@ export function LessonPrototype({ lesson, moduleColor, onBack, onComplete, onNex
               onComplete={onComplete}
               onBackToPath={onBack}
               onNextLesson={onNextLesson}
+              getAskedIds={getAskedIds}
+              recordQuizAttempt={recordQuizAttempt}
             />
           )}
         </div>
@@ -543,6 +548,8 @@ function MasteryStage({
   onComplete,
   onBackToPath,
   onNextLesson,
+  getAskedIds,
+  recordQuizAttempt,
 }: {
   lesson: Lesson
   moduleColor: string
@@ -550,8 +557,20 @@ function MasteryStage({
   onComplete: (correct: number, total: number) => void
   onBackToPath: () => void
   onNextLesson: (() => void) | null
+  getAskedIds: (lessonId: string) => string[]
+  recordQuizAttempt: (lessonId: string, askedIds: string[]) => void
 }) {
   const [result, setResult] = useState<{ correct: number; total: number } | null>(null)
+  const [attempt, setAttempt] = useState<QuizAttempt>(() => selectQuizAttempt(lesson.quiz, getAskedIds(lesson.id)))
+
+  useEffect(() => {
+    recordQuizAttempt(lesson.id, attempt.askedIds)
+  }, [attempt, lesson.id, recordQuizAttempt])
+
+  function retry() {
+    setAttempt(selectQuizAttempt(lesson.quiz, getAskedIds(lesson.id)))
+    setResult(null)
+  }
 
   if (result) {
     const pct = result.total ? Math.round((result.correct / result.total) * 100) : 0
@@ -566,7 +585,7 @@ function MasteryStage({
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <button
-            onClick={() => setResult(null)}
+            onClick={retry}
             className="rounded-xl border border-[var(--color-border)] hover:border-[var(--color-brand)] px-5 py-3 font-semibold transition-colors cursor-pointer"
           >
             לנסות שוב
@@ -601,7 +620,7 @@ function MasteryStage({
       <h2 className="text-xl font-bold leading-snug mb-1">🏆 בדיקת שליטה</h2>
       <p className="text-sm text-[var(--color-text-faint)] mb-5">ענו נכון על 75% ומעלה כדי לסיים את השיעור בהצלחה.</p>
       <Quiz
-        questions={lesson.quiz}
+        questions={attempt.questions}
         onFinish={(correct, total) => {
           setResult({ correct, total })
           onComplete(correct, total)
