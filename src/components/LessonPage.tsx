@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Lesson, Module } from '../types'
 import { Quiz } from './Quiz'
+import { LessonReader } from './LessonReader'
 
 type Props = {
   module: Module
@@ -41,37 +42,7 @@ export function LessonPage({ module, lesson, lessonNumber, totalInModule, onBack
         </div>
 
         {stage === 'reading' && (
-          <div className="animate-pop-in">
-            <h1 className="text-3xl font-extrabold mb-2 leading-tight">{lesson.title}</h1>
-            <p className="text-[var(--color-text-dim)] mb-8">{lesson.summary}</p>
-
-            <div className="flex flex-col gap-4 text-[15.5px] leading-relaxed text-[var(--color-text)]">
-              {lesson.content.map((paragraph, i) => (
-                <p key={i}>{paragraph}</p>
-              ))}
-            </div>
-
-            {lesson.keyTerms && lesson.keyTerms.length > 0 && (
-              <div className="mt-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
-                <div className="text-xs font-bold text-[var(--color-brand-soft)] mb-3 tracking-wide">מושגי מפתח</div>
-                <dl className="flex flex-col gap-3">
-                  {lesson.keyTerms.map((kt) => (
-                    <div key={kt.term}>
-                      <dt className="font-semibold text-sm">{kt.term}</dt>
-                      <dd className="text-sm text-[var(--color-text-dim)] mt-0.5">{kt.def}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-            )}
-
-            <button
-              onClick={() => setStage('quiz')}
-              className="mt-10 w-full rounded-xl bg-[var(--color-brand)] hover:bg-[var(--color-brand-soft)] text-white font-bold py-3.5 transition-colors cursor-pointer"
-            >
-              בואו נבדוק הבנה — {lesson.quiz.length} שאלות ←
-            </button>
-          </div>
+          <LessonReader lesson={lesson} moduleColor={module.color} onDone={() => setStage('quiz')} />
         )}
 
         {stage === 'quiz' && (

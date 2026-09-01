@@ -1,10 +1,13 @@
+import { useState } from 'react'
 import { curriculum, totalLessons, totalQuizQuestions } from '../data/curriculum'
+import { PROTOTYPE_LESSON } from '../data/prototypeLesson'
 import type { Lesson, Module } from '../types'
 import { useProgress } from '../hooks/useProgress'
 import { ProgressRing } from './ProgressRing'
 
 type Props = {
   onOpenLesson: (moduleId: string, lessonId: string) => void
+  onOpenGlossary: () => void
 }
 
 const difficultyStyle: Record<string, string> = {
@@ -13,8 +16,9 @@ const difficultyStyle: Record<string, string> = {
   מתקדם: 'text-[var(--color-red)] bg-[color-mix(in_srgb,var(--color-red)_14%,transparent)]',
 }
 
-export function Home({ onOpenLesson }: Props) {
+export function Home({ onOpenLesson, onOpenGlossary }: Props) {
   const { isLessonComplete, getScore, resetProgress } = useProgress()
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
 
   const flatLessons = curriculum.flatMap((m) => m.lessons.map((l) => ({ moduleId: m.id, lesson: l })))
   const completedCount = flatLessons.filter(({ lesson }) => isLessonComplete(lesson.id)).length
@@ -30,9 +34,18 @@ export function Home({ onOpenLesson }: Props) {
   return (
     <div className="min-h-screen bg-mesh">
       <header className="max-w-5xl mx-auto px-5 pt-14 pb-10 text-center">
-        <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide px-3 py-1.5 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-brand-soft)] mb-6 animate-float">
-          <span>✨</span>
-          <span>קורס אינטראקטיבי · {totalLessons} שיעורים · {totalQuizQuestions} שאלות</span>
+        <div className="flex items-center justify-center gap-2 flex-wrap mb-6">
+          <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide px-3 py-1.5 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-brand-soft)] animate-float">
+            <span>✨</span>
+            <span>קורס אינטראקטיבי · {totalLessons} שיעורים · {totalQuizQuestions} שאלות</span>
+          </div>
+          <button
+            onClick={onOpenGlossary}
+            className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide px-3 py-1.5 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-cyan)] hover:border-[var(--color-cyan)] transition-colors cursor-pointer"
+          >
+            <span>📖</span>
+            <span>מילון מושגים</span>
+          </button>
         </div>
         <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight leading-[1.1]">
           לומדים <span className="bg-gradient-to-l from-[var(--color-brand)] via-[var(--color-pink)] to-[var(--color-cyan)] bg-clip-text text-transparent">בינה מלאכותית</span>
@@ -54,9 +67,7 @@ export function Home({ onOpenLesson }: Props) {
           </div>
           {completedCount > 0 && (
             <button
-              onClick={() => {
-                if (confirm('לאפס את כל ההתקדמות שלכם? אי אפשר לבטל את זה.')) resetProgress()
-              }}
+              onClick={() => setShowResetConfirm(true)}
               className="text-xs text-[var(--color-text-faint)] hover:text-[var(--color-red)] transition-colors underline underline-offset-4 cursor-pointer"
             >
               איפוס התקדמות
@@ -64,6 +75,41 @@ export function Home({ onOpenLesson }: Props) {
           )}
         </div>
       </header>
+
+      {showResetConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-5"
+          onClick={() => setShowResetConfirm(false)}
+        >
+          <div
+            className="animate-pop-in w-full max-w-sm rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-4xl mb-3">⚠️</div>
+            <h3 className="text-lg font-bold mb-2">לאפס את כל ההתקדמות?</h3>
+            <p className="text-sm text-[var(--color-text-dim)] mb-6">
+              כל השיעורים שהושלמו והציונים בשאלונים יימחקו. אי אפשר לבטל את זה.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowResetConfirm(false)}
+                className="flex-1 rounded-xl border border-[var(--color-border)] hover:border-[var(--color-brand)] py-2.5 font-semibold transition-colors cursor-pointer"
+              >
+                ביטול
+              </button>
+              <button
+                onClick={() => {
+                  resetProgress()
+                  setShowResetConfirm(false)
+                }}
+                className="flex-1 rounded-xl bg-[var(--color-red)] hover:opacity-90 text-[#0a0a12] py-2.5 font-semibold transition-opacity cursor-pointer"
+              >
+                כן, אפס
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="max-w-5xl mx-auto px-5 pb-24 flex flex-col gap-14">
         {curriculum.map((module, moduleIndex) => (
@@ -155,7 +201,14 @@ function ModuleSection({
                 {done ? '✓' : unlocked ? lessonIndex + 1 : '🔒'}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="font-medium truncate">{lesson.title}</div>
+                <div className="flex items-center gap-2">
+                  <div className="font-medium truncate">{lesson.title}</div>
+                  {module.id === PROTOTYPE_LESSON.moduleId && lesson.id === PROTOTYPE_LESSON.lessonId && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[color-mix(in_srgb,var(--color-amber)_16%,transparent)] text-[var(--color-amber)] shrink-0">
+                      🧪 פורמט חדש
+                    </span>
+                  )}
+                </div>
                 <div className="text-xs text-[var(--color-text-faint)] mt-0.5">
                   {lesson.minutes} דקות קריאה · {lesson.quiz.length} שאלות
                   {score && ` · ${score.correct}/${score.total} בשאלון`}

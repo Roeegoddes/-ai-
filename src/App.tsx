@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { curriculum } from './data/curriculum'
+import { PROTOTYPE_LESSON } from './data/prototypeLesson'
 import { useProgress } from './hooks/useProgress'
 import { Home } from './components/Home'
 import { LessonPage } from './components/LessonPage'
+import { GlossaryPage } from './components/GlossaryPage'
+import { LessonPrototype } from './components/prototype/LessonPrototype'
 
-type Route = { screen: 'home' } | { screen: 'lesson'; moduleId: string; lessonId: string }
+type Route = { screen: 'home' } | { screen: 'glossary' } | { screen: 'lesson'; moduleId: string; lessonId: string }
 
 function App() {
   const [route, setRoute] = useState<Route>({ screen: 'home' })
@@ -20,8 +23,17 @@ function App() {
     window.scrollTo(0, 0)
   }
 
+  function openGlossary() {
+    setRoute({ screen: 'glossary' })
+    window.scrollTo(0, 0)
+  }
+
   if (route.screen === 'home') {
-    return <Home onOpenLesson={openLesson} />
+    return <Home onOpenLesson={openLesson} onOpenGlossary={openGlossary} />
+  }
+
+  if (route.screen === 'glossary') {
+    return <GlossaryPage onBack={goHome} />
   }
 
   const moduleIndex = curriculum.findIndex((m) => m.id === route.moduleId)
@@ -36,6 +48,21 @@ function App() {
     : nextModule
       ? { moduleId: nextModule.id, lessonId: nextModule.lessons[0].id }
       : null
+
+  const isPrototype = module.id === PROTOTYPE_LESSON.moduleId && lesson.id === PROTOTYPE_LESSON.lessonId
+
+  if (isPrototype) {
+    return (
+      <LessonPrototype
+        key={lesson.id}
+        lesson={lesson}
+        moduleColor={module.color}
+        onBack={goHome}
+        onComplete={(correct, total) => markLessonComplete(lesson.id, correct, total)}
+        onNextLesson={nextLessonRef ? () => openLesson(nextLessonRef.moduleId, nextLessonRef.lessonId) : null}
+      />
+    )
+  }
 
   return (
     <LessonPage
