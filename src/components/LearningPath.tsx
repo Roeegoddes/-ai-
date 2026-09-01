@@ -103,7 +103,7 @@ function ModulePath({
         </div>
       </div>
 
-      <div className="relative mx-auto" style={{ width: PATH_WIDTH, height: pathHeight }}>
+      <div className="relative mx-auto mt-20" style={{ width: PATH_WIDTH, height: pathHeight }}>
         <svg
           className="absolute inset-0 pointer-events-none"
           width={PATH_WIDTH}
