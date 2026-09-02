@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { curriculum } from './data/curriculum'
 import { PROTOTYPE_LESSON } from './data/prototypeLesson'
 import { useProgress } from './hooks/useProgress'
@@ -6,6 +6,14 @@ import { Home } from './components/Home'
 import { LessonPage } from './components/LessonPage'
 import { GlossaryPage } from './components/GlossaryPage'
 import { LessonPrototype } from './components/prototype/LessonPrototype'
+
+// Lazy-loaded: pulls in three.js / @react-three/fiber, which is otherwise
+// dead weight on every other page (home, glossary, all other lessons).
+const NeuronLessonExperience = lazy(() =>
+  import('./components/neuron3d/NeuronLessonExperience').then((m) => ({ default: m.NeuronLessonExperience })),
+)
+
+const NEURON_3D_LESSON = { moduleId: 'neural-networks', lessonId: 'artificial-neuron' } as const
 
 type Route = { screen: 'home' } | { screen: 'glossary' } | { screen: 'lesson'; moduleId: string; lessonId: string }
 
@@ -50,6 +58,7 @@ function App() {
       : null
 
   const isPrototype = module.id === PROTOTYPE_LESSON.moduleId && lesson.id === PROTOTYPE_LESSON.lessonId
+  const isNeuron3D = module.id === NEURON_3D_LESSON.moduleId && lesson.id === NEURON_3D_LESSON.lessonId
 
   if (isPrototype) {
     return (
@@ -63,6 +72,23 @@ function App() {
         getAskedIds={getAskedIds}
         recordQuizAttempt={recordQuizAttempt}
       />
+    )
+  }
+
+  if (isNeuron3D) {
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-[#0a0a12]" />}>
+        <NeuronLessonExperience
+          key={lesson.id}
+          lesson={lesson}
+          moduleColor={module.color}
+          onBack={goHome}
+          onComplete={(correct, total) => markLessonComplete(lesson.id, correct, total)}
+          onNextLesson={nextLessonRef ? () => openLesson(nextLessonRef.moduleId, nextLessonRef.lessonId) : null}
+          getAskedIds={getAskedIds}
+          recordQuizAttempt={recordQuizAttempt}
+        />
+      </Suspense>
     )
   }
 
